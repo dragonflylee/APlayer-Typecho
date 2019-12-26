@@ -212,19 +212,15 @@ class Meting_Plugin extends Typecho_Widget implements Typecho_Plugin_Interface
      */
     public static function header()
     {
-        $api = Typecho_Widget::widget('Widget_Options')->plugin('Meting')->api;
-        $dir = Helper::options()->pluginUrl.'/Meting/assets';
-        $ver = METING_VERSION;
-        echo "<link rel=\"stylesheet\" href=\"{$dir}/APlayer.min.css?v={$ver}\">\n";
-        echo "<script type=\"text/javascript\" src=\"{$dir}/APlayer.min.js?v={$ver}\"></script>\n";
-        echo "<script>var meting_api=\"{$api}\";</script>";
+        echo "<link rel=\"stylesheet\" href=\"//cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.css\">\n";
     }
 
     public static function footer()
     {
-        $dir = Helper::options()->pluginUrl.'/Meting/assets';
-        $ver = METING_VERSION;
-        echo "<script type=\"text/javascript\" src=\"{$dir}/Meting.min.js?v={$ver}\"></script>\n";
+        $api = Typecho_Widget::widget('Widget_Options')->plugin('Meting')->api;
+        echo "<script type=\"text/javascript\" src=\"//cdn.jsdelivr.net/npm/aplayer/dist/APlayer.min.js\"></script>\n";
+        echo "<script>var meting_api=\"{$api}\";</script>";
+        echo "<script type=\"text/javascript\" src=\"//cdn.jsdelivr.net/npm/meting/dist/Meting.min.js\"></script>\n";
     }
 
     public static function playerReplace($data, $widget, $last)
@@ -244,60 +240,33 @@ class Meting_Plugin extends Typecho_Widget implements Typecho_Plugin_Interface
         $matches[5] = htmlspecialchars_decode($matches[5]);
         $pattern = self::get_shortcode_regex(array('Music'));
         preg_match_all("/$pattern/", $matches[5], $all);
-        if (sizeof($all[3])) {
-            return Meting_Plugin::parseMusic($all[3], $setting);
-        }
+        if (sizeof($all[3])) return Meting_Plugin::parseMusic($all[3], $setting);
     }
 
     public static function parseMusic($matches, $setting)
     {
-        $data = array();
-        $str = "";
+        $player = array(
+            'theme' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->theme,
+            'preload' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->preload,
+            'autoplay' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->autoplay,
+            'list-max-height' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->height,
+            'order' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->order,
+        );
+        $salt = Typecho_Widget::widget('Widget_Options')->plugin('Meting')->salt;
+        $str = '';
+
         foreach ($matches as $vo) {
-            $t = self::shortcode_parse_atts(htmlspecialchars_decode($vo));
-            $player = array(
-                'theme' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->theme?:'red',
-                'preload' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->preload?:'auto',
-                'autoplay' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->autoplay?:'false',
-                'listMaxHeight' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->height?:'340px',
-                'order' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->order?:'list',
-            );
-            if (isset($t['server'])) {
-                if (!in_array($t['server'], array('netease','tencent','xiami','baidu','kugou'))) {
-                    continue;
-                }
-                if (!in_array($t['type'], array('search','album','playlist','artist','song'))) {
-                    continue;
-                }
-                $data = $t;
+            $data = self::shortcode_parse_atts(htmlspecialchars_decode($vo));
+            $str .= "\n<meting-js ";
+            foreach ($data as $key => $value) $str .= "{$key}=\"{$value}\" ";
+            foreach ($player as $key => $value) $str .= "{$key}=\"{$value}\" ";
 
-                $salt = Typecho_Widget::widget('Widget_Options')->plugin('Meting')->salt;
+            if (isset($data['server'])) {
                 $auth = md5($salt.$data['server'].$data['type'].$data['id'].$salt);
-
-                $str .= "<div class=\"aplayer\" data-id=\"{$data['id']}\" data-server=\"{$data['server']}\" data-type=\"{$data['type']}\" data-auth=\"{$auth}\"";
-                if (is_array($setting)) {
-                    foreach ($setting as $key => $vo) {
-                        $player[$key] = $vo;
-                    }
-                }
-                foreach ($player as $key => $vo) {
-                    $str .= " data-{$key}=\"{$vo}\"";
-                }
-                $str .= "></div>\n";
-            } else {
-                $data = $t;
-
-                $str .= "<div class=\"aplayer\" data-name=\"{$data['title']}\" data-artist=\"{$data['author']}\" data-url=\"{$data['url']}\" data-cover=\"{$data['pic']}\" data-lrc=\"{$data['lrc']}\"";
-                if (is_array($setting)) {
-                    foreach ($setting as $key => $vo) {
-                        $player[$key] = $vo;
-                    }
-                }
-                foreach ($player as $key => $vo) {
-                    $str .= " data-{$key}=\"{$vo}\"";
-                }
-                $str .= "></div>\n";
+                $str .= "auth=\"{$auth}\"";
             }
+            $auth = md5($salt.$data['server'].$data['type'].$data['id'].$salt);
+            $str .= "></meting-js>\n";
         }
         return $str;
     }
