@@ -11,7 +11,6 @@ class Meting_Action extends Typecho_Widget implements Widget_Interface_Do
 
     public function action()
     {
-        $this->on($this->request->is('do=update'))->update();
         $this->on($this->request->is('do=parse'))->shortcode();
         $this->on($this->request->isGet())->api();
     }
@@ -300,55 +299,6 @@ class Meting_Action extends Typecho_Widget implements Widget_Interface_Do
             $result .= sprintf("[%02d:%02d.%03d]%s\n", $t/60000, $t%60000/1000, $t%1000, $lyric[$i][2]);
         }
         return $result;
-    }
-
-    private function update()
-    {
-        $isAdmin = call_user_func(function () {
-            $hasLogin = $this->widget('Widget_User')->hasLogin();
-            $isAdmin = false;
-            if (!$hasLogin) {
-                return false;
-            }
-            $isAdmin = $this->widget('Widget_User')->pass('administrator', true);
-            return $isAdmin;
-        }, $this);
-
-        if (!$isAdmin) {
-            die('Forbidden!');
-        }
-
-        header("Content-Type: text/plain; charset=UTF-8");
-
-        $shasum = $this->curl('https://raw.githubusercontent.com/MoePlayer/APlayer-Typecho/master/shasum.txt');
-
-        echo "获取最新特征库...\n";
-        echo $shasum."\n\n";
-
-        $shasum = explode("\n", $shasum);
-        array_pop($shasum);
-
-        echo "开始检查本地文件...\n";
-
-        foreach ($shasum as $remote) {
-            list($remote_sha256, $filename) = explode('  ', $remote);
-            if (!file_exists(__DIR__.'/'.$filename) ||
-                !hash_equals(hash('sha256', file_get_contents(__DIR__.'/'.$filename)), $remote_sha256)) {
-                echo "下载     ".$filename;
-                $url = 'https://raw.githubusercontent.com/MoePlayer/APlayer-Typecho/master'.substr($filename, 1);
-
-                if (file_put_contents(__DIR__.'/'.$filename, $this->curl($url))) {
-                    echo " (OK)\n";
-                } else {
-                    die("\n下载失败，错误信息: $url\n");
-                }
-            } else {
-                echo "无需更新  ".$filename."\n";
-            }
-        }
-
-        echo "\n\n如果插件出现错误，建议禁用再启用一次插件完成升级。";
-        die();
     }
 
     private function curl($url)

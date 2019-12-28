@@ -59,47 +59,6 @@ class Meting_Plugin extends Typecho_Widget implements Typecho_Plugin_Interface
      */
     public static function config(Typecho_Widget_Helper_Form $form)
     {
-        $t = new Typecho_Widget_Helper_Form_Element_Text(
-            'theme',
-            null,
-            '#ad7a86',
-            _t('播放器颜色'),
-            _t('播放器默认的主题颜色，支持如 #372e21、#75c、red，该设定会被[Meting]标签中的theme属性覆盖，默认为 #ad7a86')
-        );
-        $form->addInput($t);
-        $t = new Typecho_Widget_Helper_Form_Element_Text(
-            'height',
-            null,
-            '340px',
-            _t('播放器列表最大高度'),
-            _t('')
-        );
-        $form->addInput($t);
-        $t = new Typecho_Widget_Helper_Form_Element_Radio(
-            'autoplay',
-            array('true' => _t('是'),'false' => _t('否')),
-            'false',
-            _t('全局自动播放'),
-            _t('')
-        );
-        $form->addInput($t);
-        $t = new Typecho_Widget_Helper_Form_Element_Radio(
-            'order',
-            array('list' => _t('列表'), 'random' => _t('随机')),
-            'list',
-            _t('全局播放模式'),
-            _t('')
-        );
-        $form->addInput($t);
-        $t = new Typecho_Widget_Helper_Form_Element_Radio(
-            'preload',
-            array('auto' => _t('自动'),'none' => _t('不加载'),'metadata' => _t('加载元数据')),
-            'auto',
-            _t('预加载属性'),
-            _t('')
-        );
-        $form->addInput($t);
-
         $list = array(
             'none' => _t('关闭'),
             'redis' => _t('Redis'),
@@ -164,8 +123,6 @@ class Meting_Plugin extends Typecho_Widget implements Typecho_Plugin_Interface
             _t('如果您是网易云音乐的会员，可以将您的 cookie 填入此处来获取云盘等付费资源，听歌将不会计入下载次数。<br><b>如果不知道这是什么意思，忽略即可。</b>')
         );
         $form->addInput($t);
-
-        echo '<a href="'.Typecho_Common::url('action/metingapi', Helper::options()->index).'?do=update" target="_blank"><button class="btn" style="outline: 0">' . _t('检查并更新插件'). '</button></a>';
     }
 
     /**
@@ -245,13 +202,6 @@ class Meting_Plugin extends Typecho_Widget implements Typecho_Plugin_Interface
 
     public static function parseMusic($matches, $setting)
     {
-        $player = array(
-            'theme' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->theme,
-            'preload' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->preload,
-            'autoplay' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->autoplay,
-            'list-max-height' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->height,
-            'order' => Typecho_Widget::widget('Widget_Options')->plugin('Meting')->order,
-        );
         $salt = Typecho_Widget::widget('Widget_Options')->plugin('Meting')->salt;
         $str = '';
 
@@ -259,13 +209,10 @@ class Meting_Plugin extends Typecho_Widget implements Typecho_Plugin_Interface
             $data = self::shortcode_parse_atts(htmlspecialchars_decode($vo));
             $str .= "\n<meting-js ";
             foreach ($data as $key => $value) $str .= "{$key}=\"{$value}\" ";
-            foreach ($player as $key => $value) $str .= "{$key}=\"{$value}\" ";
-
             if (isset($data['server'])) {
                 $auth = md5($salt.$data['server'].$data['type'].$data['id'].$salt);
                 $str .= "auth=\"{$auth}\"";
             }
-            $auth = md5($salt.$data['server'].$data['type'].$data['id'].$salt);
             $str .= "></meting-js>\n";
         }
         return $str;
